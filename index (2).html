@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HGM Calculator — Age Calculation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0A0A0B;
+    --panel: #17181B;
+    --panel-2: #202226;
+    --candle-gold: #F2984B;
+    --candle-gold-dim: #6B4A2E;
+    --cream: #F5F6F8;
+    --muted: #8E97A8;
+    --ember: #3D8BF2;
+    --hairline: rgba(245,246,248,0.10);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background: var(--bg);
+    color: var(--cream);
+    font-family:'Inter', sans-serif;
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    padding: 48px 20px 80px;
+  }
+  .wrap{ width:100%; max-width:640px; }
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color: var(--candle-gold);
+    margin-bottom:10px;
+  }
+  h1{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size: clamp(30px, 5vw, 44px);
+    line-height:1.1;
+    margin:0 0 12px;
+  }
+  .sub{
+    color: var(--muted);
+    font-size:15px;
+    line-height:1.6;
+    margin:0 0 36px;
+    max-width:46ch;
+  }
+  .card{
+    background: var(--panel);
+    border: 1px solid var(--hairline);
+    border-radius:16px;
+    padding: 28px;
+    margin-bottom:24px;
+  }
+  label{
+    display:block;
+    font-size:12px;
+    color: var(--muted);
+    margin-bottom:8px;
+    font-family:'IBM Plex Mono', monospace;
+    letter-spacing:0.04em;
+  }
+  .date-row{
+    display:grid;
+    grid-template-columns: 1fr 1fr 1.2fr;
+    gap:12px;
+    margin-bottom:20px;
+  }
+  select{
+    width:100%;
+    background: var(--panel-2);
+    border:1px solid var(--hairline);
+    color: var(--cream);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:15px;
+    padding:12px 10px;
+    border-radius:10px;
+    appearance:none;
+    cursor:pointer;
+  }
+  select:focus{ outline:2px solid var(--ember); outline-offset:1px; }
+  button{
+    width:100%;
+    background: var(--candle-gold);
+    color: #1A0E02;
+    border:none;
+    font-family:'Inter', sans-serif;
+    font-weight:500;
+    font-size:15px;
+    padding:14px;
+    border-radius:10px;
+    cursor:pointer;
+    transition: transform 0.1s ease, background 0.15s ease;
+  }
+  button:hover{ background:#F5A968; }
+  button:active{ transform: scale(0.98); }
+  .error{
+    color: var(--ember);
+    font-size:13px;
+    margin: -8px 0 16px;
+    min-height:16px;
+  }
+
+  #result{ display:none; }
+  .headline-number{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size: clamp(40px, 8vw, 64px);
+    line-height:1;
+    margin:0 0 6px;
+    color: var(--candle-gold);
+  }
+  .headline-label{
+    color: var(--muted);
+    font-size:14px;
+    margin-bottom:28px;
+  }
+  .breakdown{
+    display:grid;
+    grid-template-columns: repeat(3,1fr);
+    gap:12px;
+    margin-bottom:28px;
+  }
+  .breakdown.breakdown-4{
+    grid-template-columns: repeat(4,1fr);
+  }
+  .stat{
+    background: var(--panel-2);
+    border-radius:10px;
+    padding:14px 12px;
+    text-align:center;
+    border: 1px solid var(--hairline);
+  }
+  .stat .n{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:22px;
+    font-weight:600;
+    color: var(--ember);
+  }
+  .stat .l{
+    font-size:11px;
+    color: var(--muted);
+    margin-top:4px;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+  }
+
+  .rack-label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    color: var(--muted);
+    letter-spacing:0.06em;
+    margin-bottom:14px;
+  }
+  .rack{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-bottom:8px;
+  }
+  .candle{ width:26px; height:64px; }
+  .flame{ transform-origin: center bottom; animation: flicker 2.4s ease-in-out infinite; }
+  @keyframes flicker{
+    0%,100%{ transform: scaleY(1) scaleX(1) translateY(0); }
+    25%{ transform: scaleY(1.06) scaleX(0.96) translateY(-0.5px); }
+    50%{ transform: scaleY(0.94) scaleX(1.04) translateY(0.5px); }
+    75%{ transform: scaleY(1.03) scaleX(0.98) translateY(-0.3px); }
+  }
+  .rack-note{
+    font-size:12.5px;
+    color: var(--muted);
+    line-height:1.6;
+  }
+
+  .more-stats{
+    border-top:1px solid var(--hairline);
+    padding-top:20px;
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:14px;
+    font-size:13.5px;
+  }
+  .more-stats div span{ display:block; color:var(--muted); font-size:11.5px; margin-bottom:3px; text-transform:uppercase; letter-spacing:0.05em;}
+
+  footer{
+    text-align:center;
+    color: var(--muted);
+    font-size:12px;
+    margin-top:8px;
+  }
+
+  .birthday-banner{
+    display:none;
+    text-align:center;
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size: clamp(20px, 4vw, 28px);
+    color: var(--candle-gold);
+    background: var(--panel);
+    border: 1px solid var(--hairline);
+    border-radius:16px;
+    padding: 18px;
+    margin-bottom:24px;
+  }
+  #balloonLayer{
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 999;
+  }
+  .balloon{
+    position:absolute;
+    bottom: -140px;
+    width:46px;
+    height:58px;
+    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+    animation: floatUp linear forwards;
+  }
+  .balloon::after{
+    content:"";
+    position:absolute;
+    left:50%;
+    top:100%;
+    width:1px;
+    height:36px;
+    background: rgba(245,246,248,0.35);
+    transform: translateX(-50%);
+  }
+  @keyframes floatUp{
+    0%{ transform: translateY(0) translateX(0) rotate(0deg); opacity:1; }
+    100%{ transform: translateY(-115vh) translateX(var(--drift)) rotate(var(--rot)); opacity:0; }
+  }
+
+  @media (max-width:480px){
+    .date-row{ grid-template-columns: 1fr 1fr; }
+    .date-row select:last-child{ grid-column: 1 / -1; }
+    .breakdown{ grid-template-columns: 1fr 1fr 1fr; }
+    .breakdown.breakdown-4{ grid-template-columns: 1fr 1fr; }
+    .more-stats{ grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">HGM Calculator</div>
+  <h1>Age calculation</h1>
+  <p class="sub">Enter a birth date below. Every ten years lights one candle on the rack — and if today's your birthday, watch what happens.</p>
+
+  <div class="card">
+    <label for="day">Birth date</label>
+    <div class="date-row">
+      <select id="day" aria-label="Day"></select>
+      <select id="month" aria-label="Month"></select>
+      <select id="year" aria-label="Year"></select>
+    </div>
+    <div class="error" id="error"></div>
+    <button id="calcBtn">Light the candles</button>
+  </div>
+
+  <div class="birthday-banner" id="birthdayBanner">🎉 Happy birthday! 🎉</div>
+
+  <div class="card" id="result">
+    <div class="headline-number" id="headlineNumber">0</div>
+    <div class="headline-label" id="headlineLabel">years old</div>
+
+    <div class="breakdown breakdown-4">
+      <div class="stat"><div class="n" id="years">0</div><div class="l">Years</div></div>
+      <div class="stat"><div class="n" id="months">0</div><div class="l">Months</div></div>
+      <div class="stat"><div class="n" id="days">0</div><div class="l">Days</div></div>
+      <div class="stat"><div class="n" id="weeks">0</div><div class="l">Weeks</div></div>
+    </div>
+
+    <div class="rack-label">Candle rack — one candle per decade</div>
+    <div class="rack" id="rack"></div>
+    <p class="rack-note" id="rackNote"></p>
+
+    <div class="more-stats">
+      <div><span>Total days lived</span><span id="totalDays"></span></div>
+      <div><span>Born on a</span><span id="weekday"></span></div>
+      <div><span>Next birthday</span><span id="nextBday"></span></div>
+      <div><span>Total hours lived</span><span id="totalHours"></span></div>
+    </div>
+  </div>
+
+  <footer>Built with a single HTML file — view source to see exactly how it works.</footer>
+</div>
+
+<div id="balloonLayer"></div>
+
+<script>
+  const daySel = document.getElementById('day');
+  const monthSel = document.getElementById('month');
+  const yearSel = document.getElementById('year');
+  const errorEl = document.getElementById('error');
+
+  const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  for(let d=1; d<=31; d++){
+    daySel.innerHTML += `<option value="${d}">${d}</option>`;
+  }
+  months.forEach((m,i)=>{
+    monthSel.innerHTML += `<option value="${i}">${m}</option>`;
+  });
+  const currentYear = new Date().getFullYear();
+  for(let y=currentYear; y>=currentYear-120; y--){
+    yearSel.innerHTML += `<option value="${y}">${y}</option>`;
+  }
+  daySel.value = 1; monthSel.value = 0; yearSel.value = currentYear - 25;
+
+  function flameSVG(){
+    return `<svg class="candle" viewBox="0 0 26 64" xmlns="http://www.w3.org/2000/svg">
+      <rect x="9" y="18" width="8" height="46" rx="2" fill="#F5F6F8" opacity="0.9"/>
+      <rect x="12.3" y="14" width="1.4" height="6" fill="#2A2A2A"/>
+      <g class="flame">
+        <path d="M13 2 C 17 8, 19 12, 13 18 C 7 12, 9 8, 13 2 Z" fill="#F2984B"/>
+        <path d="M13 7 C 15 10, 16 12.5, 13 15.5 C 10 12.5, 11 10, 13 7 Z" fill="#3D8BF2"/>
+      </g>
+    </svg>`;
+  }
+  function unlitCandleSVG(){
+    return `<svg class="candle" viewBox="0 0 26 64" xmlns="http://www.w3.org/2000/svg">
+      <rect x="9" y="18" width="8" height="46" rx="2" fill="#F5F6F8" opacity="0.35"/>
+      <rect x="12.3" y="14" width="1.4" height="6" fill="#6B4A2E"/>
+    </svg>`;
+  }
+
+  function launchBalloons(){
+    const layer = document.getElementById('balloonLayer');
+    const colors = ['#F2984B', '#3D8BF2', '#E4785A', '#4BAF7A'];
+    const count = 18;
+    for(let i=0; i<count; i++){
+      const b = document.createElement('div');
+      b.className = 'balloon';
+      const left = Math.random() * 100;
+      const drift = (Math.random() * 120 - 60) + 'px';
+      const rot = (Math.random() * 30 - 15) + 'deg';
+      const duration = 4 + Math.random() * 2.5;
+      const delay = Math.random() * 1.2;
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      b.style.left = left + '%';
+      b.style.background = color;
+      b.style.setProperty('--drift', drift);
+      b.style.setProperty('--rot', rot);
+      b.style.animationDuration = duration + 's';
+      b.style.animationDelay = delay + 's';
+      layer.appendChild(b);
+      setTimeout(() => b.remove(), (duration + delay) * 1000 + 200);
+    }
+  }
+
+  function calculateAge(){
+    errorEl.textContent = "";
+    const d = parseInt(daySel.value, 10);
+    const m = parseInt(monthSel.value, 10);
+    const y = parseInt(yearSel.value, 10);
+    const birth = new Date(y, m, d);
+    const today = new Date();
+
+    if(birth.getMonth() !== m || birth.getDate() !== d){
+      errorEl.textContent = "That date doesn't exist — check the day for that month.";
+      return;
+    }
+    if(birth > today){
+      errorEl.textContent = "That date is in the future — try again.";
+      return;
+    }
+
+    let years = today.getFullYear() - birth.getFullYear();
+    let months_ = today.getMonth() - birth.getMonth();
+    let days = today.getDate() - birth.getDate();
+
+    if(days < 0){
+      months_ -= 1;
+      const prevMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+      days += prevMonth.getDate();
+    }
+    if(months_ < 0){
+      years -= 1;
+      months_ += 12;
+    }
+
+    const msPerDay = 1000*60*60*24;
+    const totalDays = Math.floor((today - birth) / msPerDay);
+    const totalHours = totalDays * 24;
+
+    const weekdayNames = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+    const weekday = weekdayNames[birth.getDay()];
+
+    let nextBday = new Date(today.getFullYear(), m, d);
+    if(nextBday < today || (nextBday.getDate()===today.getDate() && nextBday.getMonth()===today.getMonth())){
+      if(nextBday < today) nextBday = new Date(today.getFullYear()+1, m, d);
+    }
+    const daysToNext = Math.ceil((nextBday - today) / msPerDay);
+
+    document.getElementById('headlineNumber').textContent = years;
+    document.getElementById('headlineLabel').textContent = years === 1 ? "year old" : "years old";
+    document.getElementById('years').textContent = years;
+    document.getElementById('months').textContent = months_;
+    document.getElementById('days').textContent = days;
+    document.getElementById('weeks').textContent = Math.floor(totalDays / 7).toLocaleString();
+    document.getElementById('totalDays').textContent = totalDays.toLocaleString();
+    document.getElementById('totalHours').textContent = totalHours.toLocaleString();
+    document.getElementById('weekday').textContent = weekday;
+    document.getElementById('nextBday').textContent = daysToNext === 0 ? "Today!" : `In ${daysToNext} day${daysToNext===1?'':'s'}`;
+
+    const fullDecades = Math.floor(years / 10);
+    const partial = (years % 10) / 10;
+    const rack = document.getElementById('rack');
+    rack.innerHTML = "";
+    const totalCandles = Math.max(fullDecades + 1, 1);
+    for(let i=0; i<totalCandles; i++){
+      if(i < fullDecades){
+        rack.innerHTML += flameSVG();
+      } else if(i === fullDecades && partial > 0.15){
+        rack.innerHTML += flameSVG();
+      } else {
+        rack.innerHTML += unlitCandleSVG();
+      }
+    }
+    document.getElementById('rackNote').textContent =
+      fullDecades === 0 ? "Still on the first candle." :
+      `${fullDecades} full decade${fullDecades===1?'':'s'} lit, working on the next.`;
+
+    document.getElementById('result').style.display = 'block';
+
+    const banner = document.getElementById('birthdayBanner');
+    const isBirthdayToday = (today.getMonth() === m && today.getDate() === d);
+    if(isBirthdayToday){
+      banner.style.display = 'block';
+      launchBalloons();
+    } else {
+      banner.style.display = 'none';
+    }
+  }
+
+  document.getElementById('calcBtn').addEventListener('click', calculateAge);
+</script>
+</body>
+</html>
